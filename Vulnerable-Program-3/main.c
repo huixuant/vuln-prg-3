@@ -1,5 +1,9 @@
 #include <stdlib.h>
 #include <Windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys\stat.h>
+#include <share.h>
 #include "crc32.h"
 
 #define MIN_REQ_SIZE 32
@@ -21,32 +25,38 @@ int compare_crc(uint32_t a, uint32_t b) {
 __declspec(dllexport) int fuzz_target(char* filename);
 
 int fuzz_target(char* filename) {
-    // open file 
-    FILE* fp;
-    errno_t err;
-    err = fopen_s(&fp, filename, "r");
-    if (err != 0) {
-        printf("Error reading file.");
+    int fd;
+    __int64 file_size;
+    int bytes_read;
+
+    _sopen_s(&fd, filename, _O_RDONLY, _SH_DENYRW, _S_IREAD);
+    if (fd == -1) {
+        fputs("Error opening file.", stderr);
         return 0;
     }
 
-    // determine no of bytes 
-    fseek(fp, 0, SEEK_END);
-    size_t bytes_count = ftell(fp);
-    rewind(fp);
+    file_size = _filelengthi64(fd);
+    if (file_size == -1) {
+        fputs("Error getting file size.", stderr);
+        return 0;
+    }
 
     // dynamically allocate memory for file data
-    unsigned char* buf = malloc(sizeof(unsigned char) * (bytes_count + 1));
+    unsigned char* buf = malloc(sizeof(unsigned char) * (file_size + 1));
     if (buf == NULL) {
         fputs("Memory error occured.", stderr);
         return 0;
     }
 
-    memset(buf, 0, sizeof(unsigned char) * (bytes_count + 1));
-    fread(buf, sizeof(unsigned char), bytes_count, fp);
-    fclose(fp);
+    memset(buf, 0, sizeof(unsigned char) * (file_size + 1));
+    if ((bytes_read = _read(fd, buf, file_size)) <= 0) {
+        fputs("Problem reading file.", stderr);
+        return 0;
+    }
+  
+    _close(fd);
 
-    uint32_t computed_crc = rc_crc32(0, buf, bytes_count);
+    uint32_t computed_crc = rc_crc32(0, buf, file_size);
     
     if (compare_crc(computed_crc, crc))
         this_is_a_vulnerable_function(0xFFFF);
