@@ -4,7 +4,7 @@
 
 #define MIN_REQ_SIZE 32
 
-uint32_t crc = 0x3fe3a070;
+uint32_t crc = 0xd6c4dad7;
 
 void this_is_a_vulnerable_function(size_t size) {
     char buf[10] = { 0 };

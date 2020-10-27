@@ -1,1 +1,1 @@
-This file should produce the right MD5 hash.
+This file should produce the right CRC.
