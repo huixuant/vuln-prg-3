@@ -63,6 +63,7 @@ int fuzz_target(char* filename) {
     else
         printf("Invalid input provided.");
     
+    free(buf);
     return 0;
 }
 
